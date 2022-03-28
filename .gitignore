@@ -1,0 +1,7 @@
+.idea/*
+build/*
+.air.toml
+vendor/*
+tmp/*
+logs/*
+.env.toml
