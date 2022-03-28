@@ -1,7 +1,12 @@
 package services
 
-type User struct{}
+import (
+	"im-project/db"
+	"im-project/models"
+)
 
-func (u *User) findByName() {
-
+func UserFindByNamePassword(name string, password string) models.User {
+	var user models.User
+	db.GetDB().Where("name=? AND password=?", name, password).First(&user)
+	return user
 }

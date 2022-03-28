@@ -8,7 +8,7 @@ import (
 
 func newApp() *iris.Application {
 	app := iris.New()
-	mvc.New(app.Party("/special")).Handle(new(controllers.SpecialController))
+	mvc.New(app.Party("/auth")).Handle(new(controllers.AuthController))
 	return app
 }
 
