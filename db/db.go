@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 	"im-project/config"
 	"sync"
+	"time"
 )
 
 var db *gorm.DB
@@ -31,6 +32,11 @@ func NewConnection() *gorm.DB {
 		golog.Fatalf("连接数据库失败: %v", err)
 		return nil
 	}
+
+	sqlDB, err := conn.DB()
+	sqlDB.SetMaxIdleConns(settings.PoolMaxIdleConns)
+	sqlDB.SetMaxOpenConns(settings.PoolMaxConns)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 	return conn
 }
 

@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"github.com/kataras/golog"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
@@ -13,40 +14,50 @@ import (
 type AuthController struct{}
 
 func (a *AuthController) BeforeActivation(b mvc.BeforeActivation) {
-	b.Handle("POST", "/", "Login")
+	b.Handle("POST", "/login", "Login")
+	b.Handle("GET", "/reset", "ReSetPassword")
 }
 
-func (a AuthController) getMd5String2(b []byte) string {
+func (a *AuthController) getMd5String2(b []byte) string {
 	return fmt.Sprintf("%x", md5.Sum(b))
 }
 
-func (a AuthController) Login(ctx iris.Context) {
-	type userForm struct {
-		Name     string
-		Password string
+func (a *AuthController) Login(ctx iris.Context) {
+	type form struct {
+		Name     string `form:"name" validate:"required"`
+		Password string `form:"password" validate:"required"`
 	}
-	var userFormInfo userForm
-	err := ctx.ReadJSON(&userFormInfo)
-	if err != nil {
-		golog.Infof("用户登录错误, %v", err)
+
+	var userForm form
+	if err := ctx.ReadForm(&userForm); err != nil {
+		if _, ok := err.(validator.ValidationErrors); ok {
+			ctx.JSON(iris.Map{
+				"code":    iris.StatusBadRequest,
+				"message": "登录数据有误",
+				"data":    err.Error(),
+			})
+			return
+		}
+	}
+
+	pwd := a.getMd5String2([]byte(userForm.Password + "im-project"))
+	db, user := services.UserFindByNamePassword(userForm.Name, pwd)
+	if db.RowsAffected == 0 {
 		ctx.JSON(iris.Map{
-			"code":    400,
-			"message": "登录数据有误",
+			"code":    iris.StatusNotFound,
+			"message": "用户不存在",
 			"data":    "",
 		})
 		return
 	}
-	pwd := a.getMd5String2([]byte(userFormInfo.Password + "im-project"))
-	row := services.UserFindByNamePassword(userFormInfo.Name, pwd)
-	marshal, _ := json.Marshal(row)
 	ctx.JSON(iris.Map{
-		"code": 200,
+		"code":    200,
 		"message": "success",
-		"data": marshal,
+		"data":    user,
 	})
 }
 
-func (a AuthController) Register(ctx iris.Context) {
+func (a *AuthController) Register(ctx iris.Context) {
 	type form struct {
 		Name     string `form:"name" json:"id"`
 		Password string `form:"password" json:"password"`
@@ -72,4 +83,10 @@ func (a AuthController) Register(ctx iris.Context) {
 	})
 }
 
-func (a AuthController) ReSetPassword() {}
+func (a *AuthController) ReSetPassword(ctx iris.Context) {
+	ctx.JSON(iris.Map{
+		"code":    200,
+		"message": "注册数据有误",
+	})
+	return
+}
