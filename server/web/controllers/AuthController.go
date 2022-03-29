@@ -2,12 +2,12 @@ package controllers
 
 import (
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/kataras/golog"
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/mvc"
+	"im-project/models"
 	"im-project/server/web/services"
 )
 
@@ -15,6 +15,7 @@ type AuthController struct{}
 
 func (a *AuthController) BeforeActivation(b mvc.BeforeActivation) {
 	b.Handle("POST", "/login", "Login")
+	b.Handle("POST", "/register", "Register")
 	b.Handle("GET", "/reset", "ReSetPassword")
 }
 
@@ -33,8 +34,8 @@ func (a *AuthController) Login(ctx iris.Context) {
 		if _, ok := err.(validator.ValidationErrors); ok {
 			ctx.JSON(iris.Map{
 				"code":    iris.StatusBadRequest,
-				"message": "登录数据有误",
-				"data":    err.Error(),
+				"message": err.Error(),
+				"data":    "",
 			})
 			return
 		}
@@ -59,27 +60,37 @@ func (a *AuthController) Login(ctx iris.Context) {
 
 func (a *AuthController) Register(ctx iris.Context) {
 	type form struct {
-		Name     string `form:"name" json:"id"`
-		Password string `form:"password" json:"password"`
-		Repassed string `form:"repassed" json:"repassed"`
+		Name     string `form:"name" validate:"required"`
+		Password string `form:"password" validate:"required"`
+		Repassed string `form:"repassed" validate:"required"`
+		Email    string `form:"email" validate:"required"`
+		Mobile   string `from:"mobile" validate:"required"`
 	}
 
-	var formInfo form
-	err := ctx.ReadJSON(&formInfo)
+	var regInfo form
+	err := ctx.ReadForm(&regInfo)
 	if err != nil {
+		if _, ok := err.(validator.ValidationErrors); ok {
+			ctx.JSON(iris.Map{
+				"code":    iris.StatusBadRequest,
+				"message": err.Error(),
+				"data":    "",
+			})
+			return
+		}
 		golog.Infof("用户注册错误, %v", err)
-		ctx.JSON(iris.Map{
-			"code":    400,
-			"message": "注册数据有误",
-			"data":    "",
-		})
 		return
 	}
-	marshal, _ := json.Marshal(formInfo)
+
+	var user models.User
+	user.Name = regInfo.Name
+	user.Email = regInfo.Email
+	user.Password = a.getMd5String2([]byte(regInfo.Password))
+	userId := services.UserCreate(&user)
 	ctx.JSON(iris.Map{
-		"code":    200,
-		"message": "注册数据有误",
-		"data":    marshal,
+		"code":    iris.StatusOK,
+		"message": "success",
+		"data":    userId,
 	})
 }
 

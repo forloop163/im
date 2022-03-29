@@ -6,9 +6,14 @@ import (
 	"im-project/models"
 )
 
-func UserFindByNamePassword(name string, password string) (*gorm.DB, models.User) {
+func UserFindByNamePassword(name string, password string) (*gorm.DB, *models.User) {
 	var user models.User
 	result := db.GetDB().Select([]string{"id", "name", "mobile", "email"}).
 		Where("name=? AND password=?", name, password).First(&user)
-	return result, user
+	return result, &user
+}
+
+func UserCreate(user *models.User) uint {
+	db.GetDB().Create(&user)
+	return user.Id
 }
